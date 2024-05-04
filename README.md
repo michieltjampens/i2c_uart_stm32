@@ -4,9 +4,9 @@ Because I wanted a cheaper alternative to the purpose built chips that start at 
 
 ## Info
 - Starting with the [STM32C011F4U6TR](https://www.st.com/en/microcontrollers-microprocessors/stm32c011f4.html).
- - Program memory: 16kB
- - Ram memory: 6kB
- - I2C: 1x FM+
- - USART x2
- - Costs about 1,2€ ex vat
+   - Program memory: 16kB
+   - Ram memory: 6kB
+   - I2C: 1x FM+
+   - USART x2
+   - Costs about 1,2€ ex vat
 - Code will not use LL or HAL.
