@@ -35,12 +35,14 @@
 *.i*86
 *.x86_64
 *.hex
+/firmware/Release/
 
 # Debug files
 *.dSYM/
 *.su
 *.idb
 *.pdb
+/firmware/Debug/
 
 # Kernel Module Compile Results
 *.mod*
