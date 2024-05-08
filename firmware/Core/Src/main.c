@@ -155,6 +155,7 @@ void configure_IO(void){
     NVIC_EnableIRQ(EXTI4_15_IRQn); // Actually enable it
 
 }
+/* *************************************** I R Q **************************************************** */
 void I2C1_IRQHandler(void){
 
 	  if(I2C1->ISR & I2C_ISR_RXNE){ // Receive buffer not empty
