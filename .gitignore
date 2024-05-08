@@ -43,6 +43,7 @@
 *.idb
 *.pdb
 /firmware/Debug/
+*.launch
 
 # Kernel Module Compile Results
 *.mod*

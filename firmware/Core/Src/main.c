@@ -131,24 +131,20 @@ void init(void){
     configure_IO();
 
     I2C1_Configure_Slave();
-
+    USART1_Configure();
+    USART2_Configure();
 }
 
 void configure_IO(void){
+	/* Enable the SYStemConfiguration peripheral clock, this handles interrupts */
+	/* THIS NEEDS TO GO FIRST */
+    RCC->APBENR2 |= RCC_APBENR2_SYSCFGEN;
 
 	/* The I2C pins are on the PA9 and PA10 that are from remapped on PA11 and PA12 */
-	SET_BIT(SYSCFG->CFGR1, SYSCFG_CFGR1_PA11_RMP); // PA11 Remap
-	SET_BIT(SYSCFG->CFGR1, SYSCFG_CFGR1_PA12_RMP); // PA12 Remap
-
+	SYSCFG->CFGR1 |= (SYSCFG_CFGR1_PA11_RMP|SYSCFG_CFGR1_PA12_RMP);
 
 	/* Enable the peripheral clock of GPIOA (inputs) and GPIOB (heartbeat) */
 	RCC->IOPENR |= RCC_IOPENR_GPIOAEN | RCC_IOPENR_GPIOBEN;
-
-
-	/* INPUTS & Interrupts*/
-	/* Enable the SYStemConfiguration peripheral clock, this handles interrupts */
-    RCC->APBENR2 |= RCC_APBENR2_SYSCFGEN;
-
 
     /* Finally enable the interrupt */
     NVIC_SetPriority(EXTI4_15_IRQn, 0x03); // This is for pins between 4 and 15 which 6 and 7 belong to, set to lowest priority

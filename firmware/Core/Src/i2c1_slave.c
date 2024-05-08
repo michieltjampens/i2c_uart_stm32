@@ -15,7 +15,7 @@
  */
 __INLINE void I2C1_Configure_Slave(void){
 
-  RCC->APBENR1 |= RCC_APBENR1_I2C1EN;  // Enable the I2C clock
+  SET_BIT(RCC->APBENR1,RCC_APBENR1_I2C1EN); // Enable the peripheral clock I2C1 do this before GPIO's (?)
 
   /* GPIO Setup, PA9=SCL and PA10=SDA */
   SET_BIT(RCC->IOPENR,RCC_IOPENR_GPIOAEN);  // Enable the peripheral clock of GPIOA
@@ -28,16 +28,13 @@ __INLINE void I2C1_Configure_Slave(void){
    * -> Start with clearing the AF for those pins by doing a reverse and
    * -> Then set AF bits to AF6 (0110 or 0x06)
    */
-  GPIOA->AFR[1] = (GPIOA->AFR[1] &~ (GPIO_AFRH_AFSEL9 | GPIO_AFRH_AFSEL10)) | (GPIO_AFRH_AFSEL9_1|GPIO_AFRH_AFSEL9_2|GPIO_AFRH_AFSEL9_1|GPIO_AFRH_AFSEL9_2);
-  // GPIOA->AFR[1] = (GPIOA->AFR[1] &~ 0x00000FF0) | 0x00000660;
+  GPIOA->AFR[1] = (GPIOA->AFR[1] &~ (GPIO_AFRH_AFSEL9 | GPIO_AFRH_AFSEL10)) | (GPIO_AFRH_AFSEL9_1|GPIO_AFRH_AFSEL9_2|GPIO_AFRH_AFSEL10_1|GPIO_AFRH_AFSEL10_2);
 
   /* I2C needs to be open drain */
   GPIOA->OTYPER |= GPIO_OTYPER_OT9 | GPIO_OTYPER_OT10;
 
-  SET_BIT(RCC->APBENR1,RCC_APBENR1_I2C1EN); // Enable the peripheral clock I2C1 do this before GPIO's (?)
-
   /* Configure I2C1 as slave */
-  I2C1->CR1 = I2C_CR1_PE | I2C_CR1_ADDRIE; /* Peripheral enable, address match interrupt enable */
+  I2C1->CR1 = I2C_CR1_ADDRIE; /* Address match interrupt enable */
   I2C1->OAR1 |= (uint32_t)(I2C1_OWN_ADDRESS1 << 1); /* 7-bit address (see .h) */
   I2C1->OAR1 |= I2C_OAR1_OA1EN; /* Enable own address 1 */
   I2C1->OAR2 |= (uint32_t)(I2C1_OWN_ADDRESS2 << 1); /* 7-bit address (see .h) */
