@@ -14,6 +14,9 @@
  * Brief Init the I2C1 peripheral and the used GPIO's
  */
 __INLINE void I2C1_Configure_Slave(void){
+
+  RCC->APBENR1 |= RCC_APBENR1_I2C1EN;  // Enable the I2C clock
+
   /* GPIO Setup, PA9=SCL and PA10=SDA */
   SET_BIT(RCC->IOPENR,RCC_IOPENR_GPIOAEN);  // Enable the peripheral clock of GPIOA
 
@@ -35,8 +38,10 @@ __INLINE void I2C1_Configure_Slave(void){
 
   /* Configure I2C1 as slave */
   I2C1->CR1 = I2C_CR1_PE | I2C_CR1_ADDRIE; /* Peripheral enable, address match interrupt enable */
-  I2C1->OAR1 |= (uint32_t)(I2C1_OWN_ADDRESS1 << 1); /* 7-bit address = 0x5A (see .h) */
+  I2C1->OAR1 |= (uint32_t)(I2C1_OWN_ADDRESS1 << 1); /* 7-bit address (see .h) */
   I2C1->OAR1 |= I2C_OAR1_OA1EN; /* Enable own address 1 */
+  I2C1->OAR2 |= (uint32_t)(I2C1_OWN_ADDRESS2 << 1); /* 7-bit address (see .h) */
+  I2C1->OAR2 |= I2C_OAR2_OA2EN; /* Enable own address 1 */
   SET_BIT(I2C1->CR1,I2C_CR1_RXIE | I2C_CR1_TXIE); // Enable Receive and transmit interrupt
 
   /* Configure Interrupts */
