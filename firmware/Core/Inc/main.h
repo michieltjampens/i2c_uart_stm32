@@ -35,6 +35,7 @@ extern "C" {
 #include "i2c1_slave.h"
 #include "usart1.h"
 #include "usart2.h"
+#include "isr.h"
 /* Exported types ------------------------------------------------------------*/
 
 /* Exported constants --------------------------------------------------------*/

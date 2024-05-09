@@ -129,6 +129,7 @@ void Error_Handler(void)
 void init(void){
 
     configure_IO();
+    ISR_Init();
 
     I2C1_Configure_Slave();
     USART1_Configure();
@@ -152,49 +153,7 @@ void configure_IO(void){
 
 }
 /* *************************************** I R Q **************************************************** */
-void I2C1_IRQHandler(void){
 
-	  if(I2C1->ISR & I2C_ISR_RXNE){ // Receive buffer not empty
-		  i2c_recBuffer[i2c_cnt] = I2C1->RXDR;
-		  i2c_cnt++;
-		  if( i2c_cnt == 64 ){ // prevent overflow
-			  i2c_cnt=0;
-		  }
-		  // Do something?
-	  }else if((I2C1->ISR & I2C_ISR_ADDR) == I2C_ISR_ADDR){
-		  I2C1->ICR |= I2C_ICR_ADDRCF; /* Clear address match flag */
-
-		  /* Figure out if it's the first or second port */
-		  uint8_t match = (I2C1->ISR & I2C_ISR_ADDCODE)/0x10000;
-
-		  /* Check if transfer direction is read (slave transmitter) */
-		  if((I2C1->ISR & I2C_ISR_DIR) == I2C_ISR_DIR){
-			  I2C1->CR1 |= I2C_CR1_TXIE; /* Set transmit IT */
-		  }
-	  }else if((I2C1->ISR & I2C_ISR_TXIS) == I2C_ISR_TXIS){
-	  		  I2C1->CR1 &=~ I2C_CR1_TXIE; /* Disable transmit IT */
-	  }else if(I2C1->ISR & I2C_ISR_NACKF){ /* NACK Received*/
-		  SET_BIT(I2C1->ICR, I2C_ICR_NACKCF); // Clear flag
-	  }else if(I2C1->ISR & I2C_ISR_STOPF){
-		  SET_BIT(I2C1->ICR, I2C_ICR_STOPCF); // Clear flag
-	  }else if(I2C1->ISR & I2C_ISR_BERR ){ // misplaced Start or STOP condition
-		  SET_BIT(I2C1->ICR, I2C_ICR_BERRCF);
-		  error=ERROR_I2C_BERR;
-	  }else if(I2C1->ISR & I2C_ISR_ARLO ){ // Arbitration lost
-		  SET_BIT(I2C1->ICR, I2C_ICR_ARLOCF);
-		  error=ERROR_I2C_ARLO;
-	  }else if(I2C1->ISR & I2C_ISR_PECERR){ // PEC Error in reception
-		  SET_BIT(I2C1->ICR, I2C_ICR_PECCF);
-		  error=ERROR_I2C_PECERR;
-	  }else if(I2C1->ISR & I2C_ISR_TIMEOUT){  // Timeout or tLOW detection flag
-		  SET_BIT(I2C1->ICR, I2C_ICR_TIMOUTCF);
-		  error=ERROR_I2C_TIMEOUT;
-		  /* Check address match */
-	  }else{
-	    error = ERROR_I2C; /* Report an error */
-	    NVIC_DisableIRQ(I2C1_IRQn); /* Disable I2C2_IRQn */
-	  }
-}
 #ifdef  USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number

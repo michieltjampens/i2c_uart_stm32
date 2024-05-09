@@ -1,43 +1,11 @@
 /* Includes ------------------------------------------------------------------*/
 #include <stdint.h>
 #include "../inc/usart2.h"
-#include "../inc/main.h"
-
-/* Shared variables ----------------------------------------------------------*/
-uint16_t freeSpace_USART2 = CIRCULAR-1;
-uint8_t irqStatus_USART2=IDLE;
 
 /* Private variables ---------------------------------------------------------*/
 
-/* Circular buffer for UART OUT*/
-uint8_t outputBuffer_USART2[CIRCULAR];
-uint8_t *outTemp_USART2;
-uint8_t *outStart_USART2;
-uint8_t *outEnd_USART2;
-uint8_t *outHead_USART2;
-uint8_t *outTail_USART2;
-
-/* Circular buffer for UART IN*/
-uint8_t inputBuffer_USART2[CIRCULAR];
-uint8_t *inputTemp_USART2;
-uint8_t *inputStart_USART2;
-uint8_t *inputEnd_USART2;
-uint8_t *inputHead_USART2;
-uint8_t *inputTail_USART2;
-
 
 void USART2_Configure(){
-    /* Initialise the circular buffers */
-    inputStart_USART2 = &inputBuffer_USART2[0];
-    inputEnd_USART2 =   &inputBuffer_USART2[0];
-    inputHead_USART2 =  &inputBuffer_USART2[0];
-    inputTail_USART2 =  &inputBuffer_USART2[CIRCULAR-1];
-
-    outStart_USART2 = &outputBuffer_USART2[0];
-    outEnd_USART2  =   &outputBuffer_USART2[0];
-    outHead_USART2 =  &outputBuffer_USART2[0];
-    outTail_USART2 =  &outputBuffer_USART2[CIRCULAR-1];
-
     USART2_Configure_GPIO();
     USART2_Configure_Setup();
 }
@@ -86,14 +54,6 @@ void USART2_Configure_Setup(void){
     /* USART_CR1_TE = Transmitter Enable          */
     /* USART_CR1_UE = USART Enable                */
 
-    /* polling idle frame Transmission */
-    tickstart = Tick;
-    while((USART2->ISR & USART_ISR_TC) != USART_ISR_TC){
-    	if ((Tick - tickstart ) > I2C_TIMEOUT_VALUE){
-			error = ERROR_USART_TIMEOUT;
-			return;
-		}
-    }
 	USART2->ICR |= USART_ICR_TCCF;  /* Clear TC flag  (no bit for receive) */
 	USART2->CR1 |= USART_CR1_TCIE | USART_CR1_RXFFIE; /* Enable Transmission Complete and receive interrupt */
 
@@ -102,100 +62,4 @@ void USART2_Configure_Setup(void){
 	NVIC_SetPriority(USART2_IRQn, 0);
 	/* Enable USART2_IRQn */
 	NVIC_EnableIRQ(USART2_IRQn);
-}
-
-void USART2_writeByte( uint8_t data ){
-	if( irqStatus_USART2 & IDLE ){// Meaning buffer not in use
-		irqStatus_USART2 = BUSY;  // Show that it's in use now
-		if( outEnd_USART2==outStart_USART2 ){ // Buffer is empty
-			USART2->TDR = data; // Write the byte
-			return; // Finished here
-		}else{ // Buffer isn't empty but the irq is in idle so TXE empty, get it to work
-			USART2->TDR = *outStart_USART2++;
-			if (outStart_USART2 == outTail_USART2) {  // So never write on the tail!
-				outStart_USART2 = outHead_USART2;     // End reached, back to head
-			}
-		}
-	}
-	// At this point the irq is busy with 'something'
-	if( outEnd_USART2+1 == outStart_USART2 || (outStart_USART2==outHead_USART2 && outEnd_USART2+1==outTail_USART2 )){
-		// Getting in here means that adding a byte would overflow the buffer, so wait a bit
-		irqStatus_USART2 |= WAITING; // Put up the flag that we are waiting for a byte to transfer
-		uint32_t tickstart = Tick;
-		while( irqStatus_USART2 & WAITING ){ // This can be infinite?
-			if ((Tick - tickstart ) > 50){
-				return; // Buffer doesn't empty?
-			}
-		}
-	}
-	*outEnd_USART2++ = data;
-	if (outEnd_USART2 == outTail_USART2) // So never write on the tail!
-		outEnd_USART2 = outHead_USART2;  // End reached, back to head
-}
-
-void USART2_Transfer_Buffer( void ){
-    uint8_t rec[16];
-    uint8_t a;
-
-    if( inputStart_USART2 == inputEnd_USART2) // This shouldn't happen, but somehow does
-    	return;
-
-    /* Clean the buffer that will be used */
-    for( a=0;a<16;a++)
-        rec[a]=0x00;
-
-    a = 0x00;
-    /* Move the data from the circular buffer to the local one */
-    inputTemp_USART2 = inputEnd_USART2;                             // Remember the current endstop for the circular buffer,because other might use it in ISR
-    if (inputStart_USART2 > inputTemp_USART2) {                     // If the 'end' is closer to the beginning of the buffer than the 'start'
-        do{
-            rec[a++] = *inputStart_USART2++;
-        }while( inputStart_USART2 != inputTail_USART2 && a < CIRCULAR+5);  // Repeat till the 'start' has reached the end of the buffer
-        inputStart_USART2 = inputHead_USART2;                       // Because the end was reached, continue from the start of the buffer
-    }
-    do{
-        rec[a++] = *inputStart_USART2++;
-    }while( inputStart_USART2 < inputTemp_USART2 && a < CIRCULAR+5);      // Repeat the 'start' is the same as the 'end'
-}
-void USART2_IRQHandler(void){
-    uint8_t recChar = 0;
-    uint8_t ok = 0x01;
-
-    // Check if interrupt is due to transmit complete
-    if( USART2->ISR & USART_ISR_TXE_TXFNF ){
-    	if( outStart_USART2 != outEnd_USART2 ){ // meaning still data to send
-			 USART2->TDR = *outStart_USART2++; // This also clears the complete flag
-			 freeSpace_USART2++;
-			 irqStatus_USART2=BUSY; // Indicate that the irq is working on the buffer
-			 if (outStart_USART2 == outTail_USART2) { // So never write on the tail!
-				 outStart_USART2 = outHead_USART2;    // End reached, back to head
-			 }
-		 }else{ // No more data to send, just clear the flag
-			 USART2->ICR = USART_ICR_TCCF; /* Clear transfer complete flag */
-			 irqStatus_USART2=IDLE;
-		 }
-    }
-    if( USART2->ISR & USART_ISR_TC ){
-    	USART2->ICR = USART_ICR_TCCF; /* Clear transfer complete flag */
-    }
-    if((USART2->ISR & USART_ISR_RXNE_RXFNE) == USART_ISR_RXNE_RXFNE){ // ISR for received data
-        recChar = (uint8_t)(USART2->RDR); /* Receive data, clear flag */
-        if( recChar >= 0x20 && recChar <= 0x7F){
-            *inputEnd_USART2++ = recChar;
-            if (inputEnd_USART2 == inputTail_USART2) { // So never write on the tail!
-                inputEnd_USART2 = inputHead_USART2;
-            }
-        }else if(recChar==0x00){
-        	ok=0x00;
-        }else if( recChar == '\n'){
-        }else if( recChar == '\r'){
-
-        }
-        // Can't echo inside the ISR! because the processor doesn't process fast enough?
-        //USART2_SendByte(recChar); // This gives issues
-    }
-    if( ok==0x00 ){ // Meaning ISR was for unknown reason
-        error = ERROR_USART_TRANSMIT; /* Report an error */
-        NVIC_DisableIRQ(USART2_IRQn); /* Disable USART2_IRQn */
-    }
 }
