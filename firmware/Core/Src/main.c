@@ -129,11 +129,12 @@ void Error_Handler(void)
 void init(void){
 
     configure_IO();
-    ISR_Init();
 
     I2C1_Configure_Slave();
     USART1_Configure();
     USART2_Configure();
+
+    ISR_Init();
 }
 
 void configure_IO(void){

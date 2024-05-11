@@ -18,7 +18,7 @@ extern "C" {
 
 /* Exported functions prototypes ---------------------------------------------*/
 void ISR_Init(void);
-
+void DMA_Init(void);
 
 /* USER CODE BEGIN EFP */
 
@@ -56,6 +56,12 @@ void ISR_Init(void);
 #define I2C_TIMEOUT_VALUE  0x05
 #define I2C_INVALID_ADDRES 0x03
 #define I2C_NOTICK 0x04
+
+
+#define I2C_IDLE_STATE 		0x00
+#define I2C_REC_SIZE_STATE  0x01
+#define I2C_REC_DATA_STATE  0x02
+#define I2C_CONF_STATE 	    0x03
 
 #ifdef __cplusplus
 }

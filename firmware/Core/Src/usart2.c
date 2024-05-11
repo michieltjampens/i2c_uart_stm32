@@ -40,8 +40,8 @@ void USART2_Configure_Setup(void){
     /* Enable the peripheral clock USART2 */
     RCC->APBENR1 |= RCC_APBENR2_USART1EN;
     /* Configure USART2 */
-    /* System clock is 16MHz (1MHz oversampling by 16), 19200 baud (both already divided by 100) */
-    USART2->BRR = (256*160000)/192;//19200??
+    /* System clock is 12MHz, 19200 baud (both already divided by 100) */
+    USART2->BRR = 120000/192;//simplified 12MHz/19200
 
     USART2->CR2 |= USART_CR2_SWAP; /* Swap RX and TX this needs to be set before CR1_UE is set */
 

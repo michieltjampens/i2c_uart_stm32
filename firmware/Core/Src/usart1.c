@@ -31,7 +31,7 @@ void USART1_Configure_Setup(void){
     RCC->APBENR2 |= RCC_APBENR2_USART1EN;
     /* Configure USART1 */
     /* System clock is 12MHz, 19200 baud (both already divided by 100) */
-    USART1->BRR = (256*120000)/192;//19200??
+    USART1->BRR = 120000/192;//19200??
 
     USART1->CR2 |= USART_CR2_SWAP; /* Swap RX and TX this needs to be set before CR1_UE is set */
 
@@ -45,7 +45,9 @@ void USART1_Configure_Setup(void){
     /* USART_CR1_UE = USART Enable                */
 
 	USART1->ICR |= USART_ICR_TCCF;  /* Clear TC flag  (no bit for receive) */
-	USART1->CR1 |= USART_CR1_TCIE | USART_CR1_RXFFIE; /* Enable Transmission Complete and receive interrupt */
+	USART1->CR1 |= USART_CR1_TXFEIE | USART_CR1_RXFFIE; /* Enable Transmission Complete and receive interrupt */
+	USART1->CR3 |= USART_CR3_DMAT;		// Enable DMA triggering for transmit
+
 
 	/* Configure Interrupt */
 	/* Set priority for USART1_IRQn */

@@ -37,8 +37,8 @@ __INLINE void I2C1_Configure_Slave(void){
   I2C1->CR1 = I2C_CR1_ADDRIE; /* Address match interrupt enable */
   I2C1->OAR1 |= (uint32_t)(I2C1_OWN_ADDRESS1 << 1); /* 7-bit address (see .h) */
   I2C1->OAR1 |= I2C_OAR1_OA1EN; /* Enable own address 1 */
-  I2C1->OAR2 |= (uint32_t)(I2C1_OWN_ADDRESS2 << 1); /* 7-bit address (see .h) */
-  I2C1->OAR2 |= I2C_OAR2_OA2EN; /* Enable own address 1 */
+  //I2C1->OAR2 |= (uint32_t)(I2C1_OWN_ADDRESS2 << 1); /* 7-bit address (see .h) */
+  //I2C1->OAR2 |= I2C_OAR2_OA2EN; /* Enable own address 2 */
   SET_BIT(I2C1->CR1,I2C_CR1_RXIE | I2C_CR1_TXIE); // Enable Receive and transmit interrupt
 
   /* Configure Interrupts */

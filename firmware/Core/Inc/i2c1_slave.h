@@ -20,7 +20,6 @@ extern __IO uint16_t error;
 void I2C1_Configure_Slave(void);
 
 /* Other */
-void I2C1_IRQHandler(void);
 
 /* Private defines -----------------------------------------------------------*/
 #define I2C_OK 0x01
