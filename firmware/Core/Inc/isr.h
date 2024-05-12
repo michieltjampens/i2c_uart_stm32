@@ -19,7 +19,7 @@ extern "C" {
 /* Exported functions prototypes ---------------------------------------------*/
 void ISR_Init(void);
 void DMA_Init(void);
-
+void Check_usart1_out();
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */
@@ -29,7 +29,7 @@ void DMA_Init(void);
 #define ERROR_USART_ISR_TC 	 0x21
 #define ERROR_USART_TIMEOUT  0x22
 
-#define CIRCULAR 512
+#define CIRCULAR 150
 
 #define IDLE 	0x01
 #define BUSY 	0x02

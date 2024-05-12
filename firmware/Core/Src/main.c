@@ -52,7 +52,7 @@ int main(void){
 
   /* Infinite loop */
   while (1){
-
+	  Check_usart1_out();
   }
 
 }

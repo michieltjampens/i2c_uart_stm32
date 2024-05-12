@@ -25,7 +25,6 @@ void USART1_Configure_GPIO(void){
     GPIOA->AFR[0] = (GPIOA->AFR[0] &~ (GPIO_AFRL_AFSEL0 | GPIO_AFRL_AFSEL1)) | (GPIO_AFRL_AFSEL1_2|GPIO_AFRL_AFSEL1_2);
 }
 void USART1_Configure_Setup(void){
-	uint32_t tickstart;
 
     /* Enable the peripheral clock USART1 */
     RCC->APBENR2 |= RCC_APBENR2_USART1EN;
@@ -44,8 +43,8 @@ void USART1_Configure_Setup(void){
     /* USART_CR1_TE = Transmitter Enable          */
     /* USART_CR1_UE = USART Enable                */
 
-	USART1->ICR |= USART_ICR_TCCF;  /* Clear TC flag  (no bit for receive) */
-	USART1->CR1 |= USART_CR1_TXFEIE | USART_CR1_RXFFIE; /* Enable Transmission Complete and receive interrupt */
+	//USART1->ICR |= USART_ICR_TCCF;   /* Clear TC flag  (no bit for receive) */
+	USART1->CR1 |= USART_CR1_RXFFIE; /* Enable Transmission Complete and receive interrupt */
 	USART1->CR3 |= USART_CR3_DMAT;		// Enable DMA triggering for transmit
 
 

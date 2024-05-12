@@ -9,8 +9,8 @@
 /* Circular buffer for UART1 OUT*/
 uint8_t outputBuffer_USART1[CIRCULAR];
 uint8_t *outTemp_USART1;
-uint8_t *outStart_USART1;
-uint8_t *outEnd_USART1;
+uint8_t *outDMA_USART1;
+uint8_t *inI2C_USART1;
 uint8_t *outHead_USART1;
 uint8_t *outTail_USART1;
 
@@ -42,6 +42,7 @@ uint8_t isr_error;
 uint8_t i2c_state = I2C_IDLE_STATE;
 uint8_t uart_select  = 0x00;
 uint8_t uart_expected = 0x00;
+uint8_t done=0x00;
 
 uint16_t uart1_todo = 0x00;
 uint16_t uart2_todo = 0x00;
@@ -53,8 +54,8 @@ void ISR_Init(){
     inputHead_USART1 =  &inputBuffer_USART1[0];
     inputTail_USART1 =  &inputBuffer_USART1[CIRCULAR-1];
 
-    outStart_USART1 = &outputBuffer_USART1[0];
-    outEnd_USART1  =  &outputBuffer_USART1[0];
+    outDMA_USART1 = &outputBuffer_USART1[0];
+    inI2C_USART1  =  &outputBuffer_USART1[0];
     outHead_USART1 =  &outputBuffer_USART1[0];
     outTail_USART1 =  &outputBuffer_USART1[CIRCULAR-1];
 
@@ -70,15 +71,14 @@ void ISR_Init(){
 
     DMA_Init();
 }
-
 void DMA_Init(){
     // Init DMA for I2C->UART
     SET_BIT(RCC->AHBENR,RCC_AHBENR_DMA1EN);				// Enable the clock
 
-    DMAMUX1_Channel0->CCR = 51 << DMAMUX_CxCR_DMAREQ_ID_Pos;
+    DMAMUX1_Channel0->CCR = 51;
 
     DMA1_Channel1->CPAR = (uint32_t)&(USART1->TDR);		// Set the destination (works)
-    DMA1_Channel1->CMAR = (uint32_t)outStart_USART1;    // Set the start point of the buffer
+    DMA1_Channel1->CMAR = (uint32_t)outDMA_USART1;    // Set the start point of the buffer
     //DMA1_Channel1->CNDTR = 5; 							// Set the amount of data to transfer (but unknown at this time)
     DMA1_Channel1->CCR = DMA_CCR_MINC 		// Memory increment
     					| DMA_CCR_DIR 		// Read from memory
@@ -101,6 +101,41 @@ void DMA_Init(){
      *
      */
 }
+void Check_usart1_out(){
+	// If DMA is active, nothing to do so return
+	if( DMA1_Channel1->CCR & DMA_CCR_EN )
+		return;
+
+	// If there isn't any new data in the buffer, nothing do so so return
+	if( outDMA_USART1 == inI2C_USART1 )
+		return;
+
+	/* If we get here, it means the DMA isn't active but there's at least one byte in the buffer */
+	uint16_t todo = uart1_todo; // Make a backup because isr might overwrite this
+
+	// Find the adres of the last byte, which will be the next start
+	uint8_t *newStart_USART1 = outDMA_USART1 + todo;
+
+	// Check if we go beyond or on the tail
+	if( newStart_USART1 >= outTail_USART1 ){ // We go beyond, so only start the part till the tail
+		todo = outTail_USART1-outDMA_USART1; // Update the start to where the dma will end
+		newStart_USART1 = outHead_USART1; // Update the start to beginning of buffer
+	}
+	DMA1_Channel1->CNDTR = todo;
+	uart1_todo -= todo; // substract the portion from the total
+
+	if( todo > 1 ){
+		uint8_t timeout=0;
+		while( inI2C_USART1 - outDMA_USART1 < 2 && timeout<200){; // Wait for another byte
+			timeout++;
+		}
+		if( timeout>=200 ){
+			timeout=0;
+		}
+	}
+	outDMA_USART1 = newStart_USART1; // Update the start to where the dma will end
+	SET_BIT(DMA1_Channel1->CCR,DMA_CCR_EN); // Start it again
+}
 void USART1_IRQHandler(void){
 
     uint8_t ok = 0x01;
@@ -111,16 +146,6 @@ void USART1_IRQHandler(void){
     if((USART1->ISR & USART_ISR_RXNE_RXFNE) == USART_ISR_RXNE_RXFNE){ // ISR for received data
     	uint8_t recChar = (uint8_t)(USART1->RDR); /* Receive data, clear flag */
     }
-    // Check if interrupt is due to transmit complete
-   /* if( USART1->ISR & USART_ISR_TXE_TXFNF ){
-    	if( outStart_USART1 != outEnd_USART1 ){ // meaning still data to send
-			 USART1->TDR = *outStart_USART1++; // This also clears the complete flag
-			 uart1_recs--;
-			 if (outStart_USART1 == outTail_USART1) { // So never write on the tail!
-				 outStart_USART1 = outHead_USART1;    // End reached, back to head
-			 }
-		 }
-    }*/
     if( ok==0x00 ){ // Meaning ISR was for unknown reason
         isr_error = ERROR_USART_TRANSMIT; /* Report an error */
         NVIC_DisableIRQ(USART1_IRQn); /* Disable USART1_IRQn */
@@ -131,22 +156,13 @@ void USART2_IRQHandler(void){
 
     uint8_t ok = 0x01;
 
-
     if( USART2->ISR & USART_ISR_TC ){
     	USART2->ICR = USART_ICR_TCCF; /* Clear transfer complete flag */
     }
     if((USART2->ISR & USART_ISR_RXNE_RXFNE) == USART_ISR_RXNE_RXFNE){ // ISR for received data
     	uint8_t recChar = (uint8_t)(USART2->RDR); /* Receive data, clear flag */
     }
-    // Check if interrupt is due to transmit complete
-    if( USART2->ISR & USART_ISR_TXE_TXFNF ){
-    	/*if( outStart_USART2 != outEnd_USART2 ){ // meaning still data to send
-			 USART2->TDR = *outStart_USART2++; // This also clears the complete flag
-			 if (outStart_USART2 == outTail_USART2) { // So never write on the tail!
-				 outStart_USART2 = outHead_USART2;    // End reached, back to head
-			 }
-		 }*/
-    }
+
     if( ok==0x00 ){ // Meaning ISR was for unknown reason
     	isr_error = ERROR_USART_TRANSMIT; /* Report an error */
         NVIC_DisableIRQ(USART2_IRQn); /* Disable USART2_IRQn */
@@ -157,27 +173,9 @@ void DMA1_Channel1_IRQHandler(void) {  // now it does nothing only clears the fl
 	if(DMA1 -> ISR & (DMA_ISR_TCIF1)) {  // Transfer complete for channel 1
         DMA1 -> IFCR |= DMA_IFCR_CTCIF1; // Clear the transfer complete flag
         CLEAR_BIT(DMA1_Channel1->CCR,DMA_CCR_EN); // Finished, so disable it
-
-        /* Check if a restart is needed */
-        if( outStart_USART1 == outEnd_USART1) // No new data added, nothing to do (or did a full lap...)
-        	return; // So return
-
-        uint16_t tosend;
-        DMA1_Channel1->CMAR = (uint32_t)outStart_USART1; //Update the startpoint
-
-        if( outStart_USART1 > outEnd_USART1 ){ // Meaning new data circled around
-        	tosend = outTail_USART1 - outStart_USART1-1;
-        	outStart_USART1 = outHead_USART1; // And update the start to the head
-        	uart1_todo -= tosend; // Subtract this amount from the amount to send
-        }else{ // Meaning new data but not circled around, so send remainder
-        	tosend = uart1_todo;
-        	uart1_todo = 0; // All data is scheduled to be send, so clear this
-        	outStart_USART1 += tosend; // And alter the start accordingly
-        }
-        DMA1_Channel1->CNDTR = tosend; // So schedule all data received
-        SET_BIT(DMA1_Channel1->CCR,DMA_CCR_EN); // Start it again
+    	// Update the dma start position
+    	DMA1_Channel1->CMAR = (uint32_t)outDMA_USART1;
     }
-
 }
 void I2C1_IRQHandler(void){
 	  uint8_t temp;
@@ -186,24 +184,14 @@ void I2C1_IRQHandler(void){
 		  switch(i2c_state){
 		  	  case I2C_REC_DATA_STATE:// Put this first because it's called most often?
 					if( uart_select == 0x01 ){ // Comms selected UART1
-						*outEnd_USART1++ = I2C1->RXDR;
-						if (outEnd_USART1 == outTail_USART1) { // Wrap around
-							outEnd_USART1 = outHead_USART1;
-						}
-						// Now that at least one byte is in the buffer
-						// Check if DMA is active, if not activate it
-						if( !(DMA1_Channel1->CCR & DMA_CCR_EN) ){
-							DMA1_Channel1->CCR |= DMA_CCR_EN;
+						*inI2C_USART1++ = I2C1->RXDR;
+						if (inI2C_USART1 == outTail_USART1) { // Wrap around
+							inI2C_USART1 = outHead_USART1;
 						}
 					}else if( uart_select == 0x02 ){ // Comms selected uart2
 						*outEnd_USART2++ = I2C1->RXDR;
 						if (outEnd_USART2 == outTail_USART2) { // Wrap around
 							outEnd_USART2 = outHead_USART2;
-						}
-						// Now that atleast one byte is in the buffer
-						// Check if DMA is active, if not activate it
-						if( !(DMA1_Channel2->CCR & DMA_CCR_EN) ){
-							DMA1_Channel2->CCR |= DMA_CCR_EN;
 						}
 					}else{
 						temp = I2C1->RXDR; // Receive the data
@@ -217,36 +205,11 @@ void I2C1_IRQHandler(void){
 		  		  	 }
 		  		  	 break;
 		  	  case I2C_REC_SIZE_STATE:
-		  		  // First check if it's for uart1 or 2
+		  		 // First check if it's for uart1 or 2
 		  		if( uart_select == 0x01 ){
-		  			  // Check if DMA is already active
-					  if( DMA1_Channel1->CCR & DMA_CCR_EN ){ // It's already active
-						uart1_todo += I2C1->RXDR; // Keep track of the amount of data the DMA isn't aware of
-					  }else{  // DMA isn't active, so set it up
-						  uart_expected	= I2C1->RXDR;
-						  if( outStart_USART1 + uart_expected >= outTail_USART1 ){ // If it would go beyond the tail, limit it
-							  uint16_t todo = outTail_USART1 - outStart_USART1;
-							  DMA1_Channel1->CNDTR = todo; // So schedule the part till the tail
-							  uart1_todo += uart_expected - todo; // And add the remainder to the todo
-							  outStart_USART1=outHead_USART1; // This means the start will end up at the head
-						  }else{ // Still below the tail so schedule the full message
-							  DMA1_Channel1->CNDTR = uart_expected; // all data scheduled
-							  outStart_USART1 += uart_expected; // Move start to expected end position
-						  }
-					  }
+		  			  uart1_todo += I2C1->RXDR; // Keep track of the amount of data the DMA isn't aware of
 		  		}else{
-					if( DMA1_Channel2->CCR & DMA_CCR_EN ){ // It's already active
-						uart2_todo += I2C1->RXDR; // Keep track of the amount of data the DMA isn't aware of
-					}else{  // DMA isn't active, so set it up
-						uart_expected	= I2C1->RXDR;
-						if( outStart_USART2 + uart_expected > outTail_USART2 ){ // If it would go beyond the tail, limit it
-							DMA1_Channel2->CNDTR = outTail_USART2 - outStart_USART2;
-							 outStart_USART2=outHead_USART2;
-						}else{ // If not, schedule the full message
-							DMA1_Channel2->CNDTR = uart_expected;
-							outStart_USART2 += uart_expected;
-						}
-					}
+		  			uart2_todo += I2C1->RXDR; // Keep track of the amount of data the DMA isn't aware of
 		  		}
 		  		i2c_state = I2C_REC_DATA_STATE;
 		  		break;
