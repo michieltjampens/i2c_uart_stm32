@@ -19,7 +19,8 @@ extern "C" {
 /* Exported functions prototypes ---------------------------------------------*/
 void ISR_Init(void);
 void DMA_Init(void);
-void Check_usart1_out();
+void Check_usart1_out(void);
+void Check_usart2_out(void);
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */
