@@ -6,7 +6,7 @@
  */
 #include "isr.h"
 
-/* Circular buffer for I2C to UART1T*/
+/* Circular buffers for I2C to UART */
 uint8_t I2C_to_USART1[CIRCULAR];
 uint8_t *outDMA_USART1;
 uint8_t *inI2C_USART1;
@@ -15,15 +15,6 @@ uint8_t *outTail_USART1;
 uint16_t uart1_wait=0;			// Count amount of data received through i2c for uart2
 uint16_t uart1_todo = 0x00;		// Keep track of amount of bytes to receive and pass onwards
 
-/* Circular buffer for UART1 to I2C*/
-uint8_t USART1_to_I2C[CIRCULAR];
-uint8_t *inputTemp_USART1;
-uint8_t *inputStart_USART1;
-uint8_t *inputEnd_USART1;
-uint8_t *inputHead_USART1;
-uint8_t *inputTail_USART1;
-
-/* Circular buffer for I2C to UART2*/
 uint8_t I2C_to_USART2[CIRCULAR];
 uint8_t *outDMA_USART2;
 uint8_t *inI2C_USART2;
@@ -32,7 +23,14 @@ uint8_t *outTail_USART2;
 uint16_t uart2_wait=0;			// Count amount of data received through i2c for uart2
 uint16_t uart2_todo = 0x00;		// Keep track of amount of bytes to receive and pass onwards
 
-/* Circular buffer for UART2 to I2C*/
+/* Circular buffer for UART to I2C*/
+uint8_t USART1_to_I2C[CIRCULAR];
+uint8_t *inputTemp_USART1;
+uint8_t *inputStart_USART1;
+uint8_t *inputEnd_USART1;
+uint8_t *inputHead_USART1;
+uint8_t *inputTail_USART1;
+
 uint8_t USART2_to_I2C[CIRCULAR];
 uint8_t *inputTemp_USART2;
 uint8_t *inputStart_USART2;
@@ -40,7 +38,7 @@ uint8_t *inputEnd_USART2;
 uint8_t *inputHead_USART2;
 uint8_t *inputTail_USART2;
 
-
+/* Other */
 uint8_t isr_error;					// Last error store
 uint8_t i2c_state = I2C_IDLE_STATE; // State in the i2c data receive flow
 uint8_t uart_select  = 0x00;		// UART that is target of the active i2c comms
@@ -226,25 +224,25 @@ void DMA1_Channel23_IRQHandler(void) {  // now it does nothing only clears the f
 void I2C1_IRQHandler(void){
 
 	  if(I2C1->ISR & I2C_ISR_RXNE){ // Receive buffer not empty
+		  uint8_t temp = I2C1->RXDR; // Read it directly so RXNE is cleared
 		  switch(i2c_state){
 		  	  case I2C_REC_DATA_STATE:// Put this first because it's called most often?
 					if( uart_select == 0x01 ){ // Comms selected UART1
-						*inI2C_USART1++ = I2C1->RXDR;
+						*inI2C_USART1++ = temp;
 						if (inI2C_USART1 == outTail_USART1) { // Wrap around
 							inI2C_USART1 = outHead_USART1;
 						}
 						uart1_wait++;
 					}else if( uart_select == 0x02 ){ // Comms selected uart2
-						*inI2C_USART2++ = I2C1->RXDR;
+						*inI2C_USART2++ = temp;
 						if (inI2C_USART2 == outTail_USART2) { // Wrap around
 							inI2C_USART2 = outHead_USART2;
 						}
-					}else{
-						uint8_t temp = I2C1->RXDR; // Receive the data
+						uart2_wait++;
 					}
 					break;
 		  	  case I2C_IDLE_STATE:
-		  		  	 if( I2C1->RXDR == 1){// Receive the data
+		  		  	 if( temp == 1){// Receive the data
 		  		  		 i2c_state = I2C_REC_SIZE_STATE;
 		  		  	 }else{
 		  		  		i2c_state = I2C_CONF_STATE;
@@ -253,16 +251,16 @@ void I2C1_IRQHandler(void){
 		  	  case I2C_REC_SIZE_STATE:
 		  		 // First check if it's for uart1 or 2
 		  		if( uart_select == 0x01 ){
-		  			uart1_todo += I2C1->RXDR; // Keep track of the amount of data the DMA isn't aware of
+		  			uart1_todo += temp; // Keep track of the amount of data the DMA isn't aware of
 		  			uart1_wait=0;
 		  		}else{
-		  			uart2_todo += I2C1->RXDR; // Keep track of the amount of data the DMA isn't aware of
+		  			uart2_todo += temp; // Keep track of the amount of data the DMA isn't aware of
 		  			uart2_wait=0;
 		  		}
 		  		i2c_state = I2C_REC_DATA_STATE;
 		  		break;
 		  	  default:
-		  		  uint8_t temp = I2C1->RXDR; // Unknown state, just read it to clear the flag
+		  		  // Unknown state
 		  		  break;
 		  }
 	  }else if((I2C1->ISR & I2C_ISR_ADDR) == I2C_ISR_ADDR){
