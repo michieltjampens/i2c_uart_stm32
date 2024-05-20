@@ -69,9 +69,9 @@ void ISR_Init(){
     outHead_USART2 = &I2C_to_USART2[0];
     outTail_USART2 = &I2C_to_USART2[CIRCULAR-1];
 
-    DMA_Init();
+    LPUART1_DMA_Init();
 }
-void DMA_Init(){
+void LPUART1_DMA_Init(){
     // Init DMA for I2C->UART
     SET_BIT(RCC->AHBENR,RCC_AHBENR_DMA1EN);				// Enable the clock
 
