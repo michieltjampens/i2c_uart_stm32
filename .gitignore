@@ -57,3 +57,4 @@ dkms.conf
 # Diptrace temp files 
 *.dch~
 *.dip~
+firmware/.settings/language.settings.xml
