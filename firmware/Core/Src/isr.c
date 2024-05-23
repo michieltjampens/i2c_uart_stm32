@@ -209,7 +209,7 @@ void DMA1_Channel1_IRQHandler(void) {  // now it does nothing only clears the fl
     	DMA1_Channel1->CMAR = (uint32_t)outDMA_USART1;
     }
 }
-void DMA1_Channel23_IRQHandler(void) {  // now it does nothing only clears the flag
+void DMA1_Channel2_3_IRQHandler(void) {  // now it does nothing only clears the flag
 	DMA1 -> IFCR |= DMA_IFCR_CHTIF2;
 	if(DMA1 -> ISR & (DMA_ISR_TCIF2)) {  // Transfer complete for channel 2
         DMA1 -> IFCR |= DMA_IFCR_CTCIF2; // Clear the transfer complete flag
