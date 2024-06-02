@@ -47,6 +47,8 @@ void Error_Handler(void);
 void SystemClock_Config(void);
 void init(void);
 void configure_IO(void);
+void IRQ_PulseSetup(void);
+
 /* Private defines -----------------------------------------------------------*/
 /* Time-out values */
 #define HSI_TIMEOUT_VALUE          ((uint32_t)100)  /* 100 ms */

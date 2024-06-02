@@ -45,7 +45,7 @@ int main(void){
 	/* Configure the system clock */
 	SysTick_Config(2000); /* 1ms config */
     SystemClock_Config();
-    SysTick_Config(16000); /* 1ms config */
+    SysTick_Config(12000); /* 1ms config */
 
   /* Initialize all configured peripherals */
     init();
@@ -107,7 +107,6 @@ __INLINE void SystemClock_Config(void){
 
 /* This function handles SysTick Handler.  */
 void SysTick_Handler(void){
-    Tick++;
 
 }
 
@@ -134,6 +133,7 @@ void init(void){
     I2C1_Configure_Slave();
     USART1_Configure();
     USART2_Configure();
+    IRQ_PulseSetup();
 
     ISR_Init();
 }
@@ -146,16 +146,51 @@ void configure_IO(void){
 	/* The I2C pins are on the PA9 and PA10 that are from remapped on PA11 and PA12 */
 	SYSCFG->CFGR1 |= (SYSCFG_CFGR1_PA11_RMP|SYSCFG_CFGR1_PA12_RMP);
 
-	/* Enable the peripheral clock of GPIOA (inputs) and GPIOB (heartbeat) */
-	RCC->IOPENR |= RCC_IOPENR_GPIOAEN | RCC_IOPENR_GPIOBEN;
+	/* Enable the peripheral clock of GPIOA (outputs)  */
+	RCC->IOPENR |= RCC_IOPENR_GPIOAEN ;
 
-    /* Finally enable the interrupt */
-    NVIC_SetPriority(EXTI4_15_IRQn, 0x03); // This is for pins between 4 and 15 which 6 and 7 belong to, set to lowest priority
-    NVIC_EnableIRQ(EXTI4_15_IRQn); // Actually enable it
+    /* IRQ on PA8 using timer output */
+	MODIFY_REG(GPIOA->MODER, GPIO_MODER_MODE8, GPIO_MODER_MODE8_1); // Enable AF
+	// Set to AF11 (1011 or 0x0B) for TIM3_CH3
+	GPIOA->AFR[1] = (GPIOA->AFR[1] &~ (GPIO_AFRH_AFSEL8 )) | (GPIO_AFRH_AFSEL8_3|GPIO_AFRH_AFSEL8_1|GPIO_AFRH_AFSEL8_0);
+
+}
+void IRQ_PulseSetup(){
+	// Reference: Pag 419 in RM0490
+	RCC->APBENR1 |= RCC_APBENR1_TIM3EN; // Enable the TIM3 clock.
+
+	/*
+	  Delay = CCRy/(TIMx_CLK/(PSC + 1))
+	  Pulse-Length= (ARR+1-CCRy)/(TIMx_CLK/(PSC+1))
+
+	  TIM3_CLK = 12MHz -> 4MHz * 3 => PSC = 3-1 = 2 =>  1 cnt = 250ns
+	*/
+	TIM3->PSC  = 6-1;	// Prescaler: 12MHz /6   = 2MHz => 1 cnt = 500ns
+	TIM3->CCR3 = 4;   // 1µs delay before starting
+	TIM3->ARR  = 205; // Pulse length of (204-4)*500ns = 100us
+
+	// The corresponding preload register must be enabled by setting the OC3PE bit in the TIMx_CCMR3 register
+	TIM3->CCMR2 |= TIM_CCMR2_OC3M_2|TIM_CCMR2_OC3M_1 // 110: PWM mode 1
+					| TIM_CCMR2_OC3PE; // Enable preload
+
+	// The auto-reload preload register (in upcounting or center-aligned modes) by setting the ARPE bit in the TIM3_CR1 register
+	TIM3->CR1 |= TIM_CR1_ARPE // Enable auto reload preload register
+					| TIM_CR1_OPM;
+
+	/* 	As the preload registers are transferred to the shadow registers only when an update event
+		occurs, before starting the counter, all registers must be initialized by setting the UG bit in
+		the TIMx_EGR register. */
+	TIM3->EGR |= TIM_EGR_UG;
+
+	TIM3->CCER  |= TIM_CCER_CC3E; // Enable PWM output on channel 3
 
 }
 /* *************************************** I R Q **************************************************** */
-
+void TIM3_IRQHandler(void){
+	CLEAR_BIT(TIM3->SR,TIM_SR_CC1IF);
+	CLEAR_BIT(TIM3->SR,TIM_SR_CC2IF);
+	CLEAR_BIT(TIM3->SR,TIM_SR_CC3IF);
+}
 #ifdef  USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
