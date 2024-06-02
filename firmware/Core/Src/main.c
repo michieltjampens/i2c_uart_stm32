@@ -156,18 +156,17 @@ void configure_IO(void){
 
 }
 void IRQ_PulseSetup(){
-	// Reference: Pag 419 in RM0490
-	RCC->APBENR1 |= RCC_APBENR1_TIM3EN; // Enable the TIM3 clock.
+
+	// Enable the TIM3 clock.
+	RCC->APBENR1 |= RCC_APBENR1_TIM3EN;
 
 	/*
 	  Delay = CCRy/(TIMx_CLK/(PSC + 1))
 	  Pulse-Length= (ARR+1-CCRy)/(TIMx_CLK/(PSC+1))
-
-	  TIM3_CLK = 12MHz -> 4MHz * 3 => PSC = 3-1 = 2 =>  1 cnt = 250ns
 	*/
-	TIM3->PSC  = 6-1;	// Prescaler: 12MHz /6   = 2MHz => 1 cnt = 500ns
-	TIM3->CCR3 = 4;   // 1µs delay before starting
-	TIM3->ARR  = 205; // Pulse length of (204-4)*500ns = 100us
+	TIM3->PSC  = 6-1; // Prescaler: 12MHz /6   = 2MHz => 1 cnt = 500ns
+	TIM3->CCR3 = 2;   // 1µs delay before starting
+	TIM3->ARR  = 203; // Pulse length of (202-2)*500ns = 100us
 
 	// The corresponding preload register must be enabled by setting the OC3PE bit in the TIMx_CCMR3 register
 	TIM3->CCMR2 |= TIM_CCMR2_OC3M_2|TIM_CCMR2_OC3M_1 // 110: PWM mode 1
@@ -178,7 +177,7 @@ void IRQ_PulseSetup(){
 					| TIM_CR1_OPM;
 
 	/* 	As the preload registers are transferred to the shadow registers only when an update event
-		occurs, before starting the counter, all registers must be initialized by setting the UG bit in
+		occurs, before starting the counter, all registers must be initialised by setting the UG bit in
 		the TIMx_EGR register. */
 	TIM3->EGR |= TIM_EGR_UG;
 
