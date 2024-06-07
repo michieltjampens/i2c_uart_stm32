@@ -44,6 +44,14 @@ uint8_t i2c_state = I2C_IDLE_STATE; // State in the i2c data receive flow
 uint8_t uart_select  = 0x00;		// UART that is target of the active i2c comms
 uint8_t uart_expected = 0x00;		// Amount of data that is expected via i2c
 
+uint8_t USART1_state_req=0;
+uint8_t USART2_state_req=0;
+
+
+uint16_t USART1_cnt=0x8BCD;
+uint16_t USART2_cnt=0x8BCD;
+uint16_t tempState=0x1234;
+
 /* *************************************************************************************** */
 /* ******************************* I N I T *********************************************** */
 /* *************************************************************************************** */
@@ -174,6 +182,10 @@ void USART1_IRQHandler(void){
     }
     if((USART1->ISR & USART_ISR_RXNE_RXFNE) == USART_ISR_RXNE_RXFNE){ // ISR for received data
     	uint8_t recChar = (uint8_t)(USART1->RDR); /* Receive data, clear flag */
+    	*inputEnd_USART1++ = recChar;
+    	USART1_cnt++;
+		if (inputEnd_USART1 == inputTail_USART1) // So never write on the tail!
+			inputEnd_USART1 = inputHead_USART1;  // End reached, back to head
     }
     if( USART1->ISR & USART_ISR_IDLE ){
     	USART1->ICR |= USART_ICR_IDLECF; /* Clear idle flag */
@@ -194,6 +206,10 @@ void USART2_IRQHandler(void){
     }
     if((USART2->ISR & USART_ISR_RXNE_RXFNE) == USART_ISR_RXNE_RXFNE){ // ISR for received data
     	uint8_t recChar = (uint8_t)(USART2->RDR); /* Receive data, clear flag */
+    	*inputEnd_USART2++ = recChar;
+    	USART2_cnt++;
+		if (inputEnd_USART2 == inputTail_USART2) // So never write on the tail!
+			inputEnd_USART2 = inputHead_USART2;  // End reached, back to head
     }
     if( USART2->ISR & USART_ISR_IDLE ){
     	USART2->ICR |= USART_ICR_IDLECF; /* Clear idle flag */
@@ -232,8 +248,9 @@ void I2C1_IRQHandler(void){
 
 	  if(I2C1->ISR & I2C_ISR_RXNE){ // Receive buffer not empty
 		  uint8_t temp = I2C1->RXDR; // Read it directly so RXNE is cleared
+
 		  switch(i2c_state){
-		  	  case I2C_REC_DATA_STATE:// Put this first because it's called most often?
+		  	  case I2C_TO_UART_DATA:// Put this first because it's called most often?
 					if( uart_select == 0x01 ){ // Comms selected UART1
 						*inI2C_USART1++ = temp;
 						if (inI2C_USART1 == outTail_USART1) { // Wrap around
@@ -248,24 +265,28 @@ void I2C1_IRQHandler(void){
 						uart2_wait++;
 					}
 					break;
+		  	  case I2C_TO_UART_SIZE:
+			  		 // First check if it's for uart1 or 2
+			  		if( uart_select == 0x01 ){
+			  			uart1_todo += temp; // Keep track of the amount of data the DMA isn't aware of
+			  			uart1_wait=0;
+			  		}else{
+			  			uart2_todo += temp; // Keep track of the amount of data the DMA isn't aware of
+			  			uart2_wait=0;
+			  		}
+			  		i2c_state = I2C_TO_UART_DATA;
+		  		  break;
 		  	  case I2C_IDLE_STATE:
-		  		  	 if( temp == 1){// Receive the data
-		  		  		 i2c_state = I2C_REC_SIZE_STATE;
-		  		  	 }else{
-		  		  		i2c_state = I2C_CONF_STATE;
-		  		  	 }
-		  		  	 break;
-		  	  case I2C_REC_SIZE_STATE:
-		  		 // First check if it's for uart1 or 2
-		  		if( uart_select == 0x01 ){
-		  			uart1_todo += temp; // Keep track of the amount of data the DMA isn't aware of
-		  			uart1_wait=0;
-		  		}else{
-		  			uart2_todo += temp; // Keep track of the amount of data the DMA isn't aware of
-		  			uart2_wait=0;
-		  		}
-		  		i2c_state = I2C_REC_DATA_STATE;
-		  		break;
+		  		  	  i2c_state = temp;
+		  		  	  if(i2c_state == I2C_REC_STATUS){
+		  		  		  // First check if it's for uart1 or 2
+		  		  		  if( uart_select == 0x01 ){
+		  		  			  tempState = USART1_cnt;
+		  		  		  }else{
+		  		  			  tempState = USART2_cnt;
+		  		  		  }
+				  	  }
+					break;
 		  	  default:
 		  		  // Unknown state
 		  		  break;
@@ -281,14 +302,25 @@ void I2C1_IRQHandler(void){
 		  }else if( match == 0x2B){
 			  uart_select = 0x02;
 		  }
-		  i2c_state = I2C_IDLE_STATE; // Beginning of new comms
 
 		  /* Check if transfer direction is read (slave transmitter) */
-		  if((I2C1->ISR & I2C_ISR_DIR) == I2C_ISR_DIR){
+		  if((I2C1->ISR & I2C_ISR_DIR) == I2C_ISR_DIR){ // If reading, prepare the first byte
 			  I2C1->CR1 |= I2C_CR1_TXIE; /* Set transmit IT */
+			  if( i2c_state==I2C_REC_STATUS ){
+				  I2C1 ->TXDR = tempState/256; // MSB first
+			  }else{
+				  I2C1 ->TXDR = 0xAA;
+			  }
+		  }else{
+			  i2c_state = I2C_IDLE_STATE; // Beginning of new comms
 		  }
 	  }else if((I2C1->ISR & I2C_ISR_TXIS) == I2C_ISR_TXIS){
 		  I2C1->CR1 &=~ I2C_CR1_TXIE; /* Disable transmit IT */
+		  if( i2c_state==I2C_REC_STATUS ){
+			  I2C1 ->TXDR = tempState%256;
+		  }else{
+			  I2C1 ->TXDR = 0xAA;
+		  }
 	  }else if(I2C1->ISR & I2C_ISR_NACKF){ /* NACK Received*/
 		  SET_BIT(I2C1->ICR, I2C_ICR_NACKCF); // Clear flag
 	  }else if(I2C1->ISR & I2C_ISR_STOPF){

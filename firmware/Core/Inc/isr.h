@@ -30,7 +30,7 @@ void Check_usart2_out(void);
 #define ERROR_USART_ISR_TC 	 0x21
 #define ERROR_USART_TIMEOUT  0x22
 
-#define CIRCULAR 150
+#define CIRCULAR 300
 
 #define IDLE 	0x01
 #define BUSY 	0x02
@@ -59,10 +59,12 @@ void Check_usart2_out(void);
 #define I2C_NOTICK 0x04
 
 
-#define I2C_IDLE_STATE 		0x00
-#define I2C_REC_SIZE_STATE  0x01
-#define I2C_REC_DATA_STATE  0x02
-#define I2C_CONF_STATE 	    0x03
+#define I2C_IDLE_STATE 	 	 0x00
+#define I2C_REC_STATUS	     0x01
+#define I2C_TO_UART_SIZE     0x02
+#define I2C_TO_UART_DATA     0x03
+#define I2C_CONF_STATE 	     0x04
+#define UART_TO_I2C_STATE    0x05
 
 #ifdef __cplusplus
 }

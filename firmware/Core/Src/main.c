@@ -107,7 +107,12 @@ __INLINE void SystemClock_Config(void){
 
 /* This function handles SysTick Handler.  */
 void SysTick_Handler(void){
-
+	/*Tick++;
+	if( Tick==500){
+		USART1->TDR=0x22;
+		USART2->TDR=0x55;
+		Tick=0;
+	}*/
 }
 
 /**
