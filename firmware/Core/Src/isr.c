@@ -175,6 +175,10 @@ void USART1_IRQHandler(void){
     if((USART1->ISR & USART_ISR_RXNE_RXFNE) == USART_ISR_RXNE_RXFNE){ // ISR for received data
     	uint8_t recChar = (uint8_t)(USART1->RDR); /* Receive data, clear flag */
     }
+    if( USART1->ISR & USART_ISR_IDLE ){
+    	USART1->ICR |= USART_ICR_IDLECF; /* Clear idle flag */
+    	TIM3->CR1 |= TIM_CR1_CEN; // Trigger irq
+    }
     if( ok==0x00 ){ // Meaning ISR was for unknown reason
         isr_error = ERROR_USART_TRANSMIT; /* Report an error */
         NVIC_DisableIRQ(USART1_IRQn); /* Disable USART1_IRQn */
@@ -191,7 +195,10 @@ void USART2_IRQHandler(void){
     if((USART2->ISR & USART_ISR_RXNE_RXFNE) == USART_ISR_RXNE_RXFNE){ // ISR for received data
     	uint8_t recChar = (uint8_t)(USART2->RDR); /* Receive data, clear flag */
     }
-
+    if( USART2->ISR & USART_ISR_IDLE ){
+    	USART2->ICR |= USART_ICR_IDLECF; /* Clear idle flag */
+    	TIM3->CR1 |= TIM_CR1_CEN; // Trigger irq
+    }
     if( ok==0x00 ){ // Meaning ISR was for unknown reason
     	isr_error = ERROR_USART_TRANSMIT; /* Report an error */
         NVIC_DisableIRQ(USART2_IRQn); /* Disable USART2_IRQn */

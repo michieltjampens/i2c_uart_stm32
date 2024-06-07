@@ -44,7 +44,7 @@ void USART1_Configure_Setup(void){
     /* USART_CR1_UE = USART Enable                */
 
 	//USART1->ICR |= USART_ICR_TCCF;   /* Clear TC flag  (no bit for receive) */
-	USART1->CR1 |= USART_CR1_RXFFIE; /* Enable Transmission Complete and receive interrupt */
+	USART1->CR1 |= USART_CR1_RXFFIE | USART_CR1_IDLEIE; // Enable Receive and idle interrupt
 	USART1->CR3 |= USART_CR3_DMAT;		// Enable DMA triggering for transmit
 
 

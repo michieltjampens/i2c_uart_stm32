@@ -55,7 +55,7 @@ void USART2_Configure_Setup(void){
     /* USART_CR1_UE = USART Enable                */
 
 	USART2->ICR |= USART_ICR_TCCF;  /* Clear TC flag  (no bit for receive) */
-	USART2->CR1 |= USART_CR1_TCIE | USART_CR1_RXFFIE; /* Enable Transmission Complete and receive interrupt */
+	USART2->CR1 |= USART_CR1_RXFFIE | USART_CR1_IDLEIE; // Enable Receive and idle interrupt
 
 	/* Configure Interrupt */
 	/* Set priority for USART2_IRQn */
