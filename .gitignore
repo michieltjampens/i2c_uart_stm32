@@ -58,3 +58,4 @@ dkms.conf
 *.dch~
 *.dip~
 firmware/.settings/language.settings.xml
+firmware/.settings/language.settings.xml
