@@ -6,7 +6,11 @@ Because I wanted a cheaper alternative to the purpose built chips that start at 
 - Testing with Rev0 hardware
 - Designing rev1, which mainly adds led's for feedback.
 - DMA implemented for I²C to UART.
+  - TX via DMA works 
 - Writing the code for [dcafs](https://github.com/michieltjampens/dcafs) to use it, decided to rewrite the I²C part for it.
+  - Sending data works.
+  - todo: receiving data
+  - todo: changing settings
     
 ## Info
 ### Hardware
