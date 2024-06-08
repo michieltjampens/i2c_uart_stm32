@@ -24,19 +24,17 @@ uint16_t uart2_wait=0;			// Count amount of data received through i2c for uart2
 uint16_t uart2_todo = 0x00;		// Keep track of amount of bytes to receive and pass onwards
 
 /* Circular buffer for UART to I2C*/
-uint8_t USART1_to_I2C[CIRCULAR];
-uint8_t *inputTemp_USART1;
-uint8_t *inputStart_USART1;
-uint8_t *inputEnd_USART1;
-uint8_t *inputHead_USART1;
-uint8_t *inputTail_USART1;
+uint8_t  USART1_to_I2C[CIRCULAR];
+uint8_t *ui_read_USART1;
+uint8_t *ui_write_USART1;
+uint8_t *ui_head_USART1;
+uint8_t *ui_tail_USART1;
 
 uint8_t USART2_to_I2C[CIRCULAR];
-uint8_t *inputTemp_USART2;
-uint8_t *inputStart_USART2;
-uint8_t *inputEnd_USART2;
-uint8_t *inputHead_USART2;
-uint8_t *inputTail_USART2;
+uint8_t *ui_read_USART2;
+uint8_t *ui_write_USART2;
+uint8_t *ui_head_USART2;
+uint8_t *ui_tail_USART2;
 
 /* Other */
 uint8_t isr_error;					// Last error store
@@ -48,43 +46,43 @@ uint8_t USART1_state_req=0;
 uint8_t USART2_state_req=0;
 
 
-uint16_t USART1_cnt=0x8BCD;
-uint16_t USART2_cnt=0x8BCD;
-uint16_t tempState=0x1234;
+uint16_t USART1_cnt=0x8000; // First bit is enable
+uint16_t USART2_cnt=0x8000;
+uint16_t tempState=0x00;
 
 /* *************************************************************************************** */
 /* ******************************* I N I T *********************************************** */
 /* *************************************************************************************** */
 void ISR_Init(){
     /* Initialise the circular buffers */
-    inputStart_USART1 = &USART1_to_I2C[0];
-    inputEnd_USART1 =   &USART1_to_I2C[0];
-    inputHead_USART1 =  &USART1_to_I2C[0];
-    inputTail_USART1 =  &USART1_to_I2C[CIRCULAR-1];
+    ui_read_USART1  = &USART1_to_I2C[0];
+    ui_write_USART1 = &USART1_to_I2C[0];
+    ui_head_USART1  = &USART1_to_I2C[0];
+    ui_tail_USART1  = &USART1_to_I2C[CIRCULAR-1];
 
-    outDMA_USART1 =  &I2C_to_USART1[0];
-    inI2C_USART1  =  &I2C_to_USART1[0];
+    outDMA_USART1  = &I2C_to_USART1[0];
+    inI2C_USART1   = &I2C_to_USART1[0];
     outHead_USART1 = &I2C_to_USART1[0];
     outTail_USART1 = &I2C_to_USART1[CIRCULAR-1];
 
-    inputStart_USART2= &USART2_to_I2C[0];
-    inputEnd_USART2  = &USART2_to_I2C[0];
-    inputHead_USART2 = &USART2_to_I2C[0];
-    inputTail_USART2 = &USART2_to_I2C[CIRCULAR-1];
+    ui_read_USART2  = &USART2_to_I2C[0];
+    ui_write_USART2 = &USART2_to_I2C[0];
+    ui_head_USART2  = &USART2_to_I2C[0];
+    ui_tail_USART2  = &USART2_to_I2C[CIRCULAR-1];
 
-    outDMA_USART2 =  &I2C_to_USART2[0];
-    inI2C_USART2  =  &I2C_to_USART2[0];
+    outDMA_USART2  = &I2C_to_USART2[0];
+    inI2C_USART2   = &I2C_to_USART2[0];
     outHead_USART2 = &I2C_to_USART2[0];
     outTail_USART2 = &I2C_to_USART2[CIRCULAR-1];
 
-    LPUART1_DMA_Init();
+    USART_DMA_Init();
 }
-void LPUART1_DMA_Init(){
+void USART_DMA_Init(){
     // Init DMA for I2C->UART
     SET_BIT(RCC->AHBENR,RCC_AHBENR_DMA1EN);				// Enable the clock
 
+    /* USART 1 */
     DMAMUX1_Channel0->CCR = 51; // usart1_tx_dma
-
     DMA1_Channel1->CPAR = (uint32_t)&(USART1->TDR);		// Set the destination (works)
     DMA1_Channel1->CMAR = (uint32_t)outDMA_USART1;    // Set the start point of the buffer
     DMA1_Channel1->CCR = DMA_CCR_MINC 		// Memory increment
@@ -93,6 +91,7 @@ void LPUART1_DMA_Init(){
 						| DMA_CCR_TEIE;     // Transfer error interrupt enabled
     NVIC_EnableIRQ(DMA1_Channel1_IRQn);		// Enable the irq
 
+    /* USART 2 */
     DMAMUX1_Channel1->CCR = 53; // usart2_tx_dma
     DMA1_Channel2->CPAR = (uint32_t)&(USART2->TDR);		// Set the destination
     DMA1_Channel2->CMAR = (uint32_t)outDMA_USART2;    // Set the start point of the buffer
@@ -182,10 +181,10 @@ void USART1_IRQHandler(void){
     }
     if((USART1->ISR & USART_ISR_RXNE_RXFNE) == USART_ISR_RXNE_RXFNE){ // ISR for received data
     	uint8_t recChar = (uint8_t)(USART1->RDR); /* Receive data, clear flag */
-    	*inputEnd_USART1++ = recChar;
+    	*ui_write_USART1++ = recChar;
     	USART1_cnt++;
-		if (inputEnd_USART1 == inputTail_USART1) // So never write on the tail!
-			inputEnd_USART1 = inputHead_USART1;  // End reached, back to head
+		if (ui_write_USART1 == ui_tail_USART1) // So never write on the tail!
+			ui_write_USART1 = ui_head_USART1;  // End reached, back to head
     }
     if( USART1->ISR & USART_ISR_IDLE ){
     	USART1->ICR |= USART_ICR_IDLECF; /* Clear idle flag */
@@ -206,10 +205,10 @@ void USART2_IRQHandler(void){
     }
     if((USART2->ISR & USART_ISR_RXNE_RXFNE) == USART_ISR_RXNE_RXFNE){ // ISR for received data
     	uint8_t recChar = (uint8_t)(USART2->RDR); /* Receive data, clear flag */
-    	*inputEnd_USART2++ = recChar;
+    	*ui_write_USART2++ = recChar;
     	USART2_cnt++;
-		if (inputEnd_USART2 == inputTail_USART2) // So never write on the tail!
-			inputEnd_USART2 = inputHead_USART2;  // End reached, back to head
+		if (ui_write_USART2 == ui_tail_USART2) // So never write on the tail!
+			ui_write_USART2 = ui_head_USART2;  // End reached, back to head
     }
     if( USART2->ISR & USART_ISR_IDLE ){
     	USART2->ICR |= USART_ICR_IDLECF; /* Clear idle flag */
@@ -270,9 +269,15 @@ void I2C1_IRQHandler(void){
 			  		if( uart_select == 0x01 ){
 			  			uart1_todo += temp; // Keep track of the amount of data the DMA isn't aware of
 			  			uart1_wait=0;
+			  			if( temp==255 ){
+
+			  			}
 			  		}else{
 			  			uart2_todo += temp; // Keep track of the amount of data the DMA isn't aware of
 			  			uart2_wait=0;
+			  			if( temp==255 ){
+
+						}
 			  		}
 			  		i2c_state = I2C_TO_UART_DATA;
 		  		  break;
@@ -308,6 +313,20 @@ void I2C1_IRQHandler(void){
 			  I2C1->CR1 |= I2C_CR1_TXIE; /* Set transmit IT */
 			  if( i2c_state==I2C_REC_STATUS ){
 				  I2C1 ->TXDR = tempState/256; // MSB first
+			  }else if( i2c_state==UART_TO_I2C_DATA ){
+				  if( uart_select == 0x01 ){
+					  I2C1 ->TXDR = *ui_read_USART1++;
+					  USART1_cnt--;
+					  if( ui_read_USART1 == ui_tail_USART1 ){
+						  ui_read_USART1 = ui_head_USART1;
+					  }
+				  }else if( uart_select == 0x02 ){
+					  I2C1 ->TXDR = *ui_read_USART2++;
+					  USART2_cnt--;
+					  if( ui_read_USART2 == ui_tail_USART2 ){
+						  ui_read_USART2 = ui_head_USART2;
+					  }
+				  }
 			  }else{
 				  I2C1 ->TXDR = 0xAA;
 			  }
@@ -318,6 +337,20 @@ void I2C1_IRQHandler(void){
 		  I2C1->CR1 &=~ I2C_CR1_TXIE; /* Disable transmit IT */
 		  if( i2c_state==I2C_REC_STATUS ){
 			  I2C1 ->TXDR = tempState%256;
+		  }else if( i2c_state==UART_TO_I2C_DATA ){
+			  if( uart_select == 0x01 ){
+				  I2C1 ->TXDR = *ui_read_USART1++;
+				  USART1_cnt--;
+				  if( ui_read_USART1 == ui_tail_USART1 ){
+					  ui_read_USART1 = ui_head_USART1;
+				  }
+			  }else{
+				  I2C1 ->TXDR = *ui_read_USART2++;
+				  USART2_cnt--;
+				  if( ui_read_USART2 == ui_tail_USART2 ){
+					  ui_read_USART2 = ui_head_USART2;
+				  }
+			  }
 		  }else{
 			  I2C1 ->TXDR = 0xAA;
 		  }

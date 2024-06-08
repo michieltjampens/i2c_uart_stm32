@@ -18,7 +18,7 @@ extern "C" {
 
 /* Exported functions prototypes ---------------------------------------------*/
 void ISR_Init(void);
-void LPUART1_DMA_Init(void);
+void USART_DMA_Init(void);
 void Check_usart1_out(void);
 void Check_usart2_out(void);
 /* USER CODE BEGIN EFP */
@@ -30,7 +30,7 @@ void Check_usart2_out(void);
 #define ERROR_USART_ISR_TC 	 0x21
 #define ERROR_USART_TIMEOUT  0x22
 
-#define CIRCULAR 300
+#define CIRCULAR 500
 
 #define IDLE 	0x01
 #define BUSY 	0x02
@@ -64,7 +64,7 @@ void Check_usart2_out(void);
 #define I2C_TO_UART_SIZE     0x02
 #define I2C_TO_UART_DATA     0x03
 #define I2C_CONF_STATE 	     0x04
-#define UART_TO_I2C_STATE    0x05
+#define UART_TO_I2C_DATA     0x05
 
 #ifdef __cplusplus
 }

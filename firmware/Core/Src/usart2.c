@@ -38,24 +38,26 @@ void USART2_Configure_Setup(void){
 	uint32_t tickstart;
 
     /* Enable the peripheral clock USART2 */
-    RCC->APBENR1 |= RCC_APBENR2_USART1EN;
+    RCC->APBENR1 |= RCC_APBENR1_USART2EN;
     /* Configure USART2 */
     /* System clock is 12MHz, 38400 baud (both already divided by 100) */
     USART2->BRR = 120000/384;//simplified 12MHz/38400
 
-    USART2->CR2 |= USART_CR2_SWAP; /* Swap RX and TX this needs to be set before CR1_UE is set */
-
     /* 8 data bit, 1 start bit, 1 stop bit, no parity */
-    USART2->CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_UE;
+    USART2->CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_RXNEIE_RXFNEIE | USART_CR1_IDLEIE;
     /* Extra info                                 */
-    /* USART2->CR1 = USART2 Control register      */
+    /* USART1->CR1 = USART1 Control register      */
     /* 8/1/1 no parity is default                 */
     /* USART_CR1_RE = Receiver enable             */
     /* USART_CR1_TE = Transmitter Enable          */
-    /* USART_CR1_UE = USART Enable                */
+    /* USART_CR1_RXFFIE = Rx buffer full int      */
+    /*  USART_CR1_IDLEIE = Idle isr enabled       */
 
-	USART2->ICR |= USART_ICR_TCCF;  /* Clear TC flag  (no bit for receive) */
-	USART2->CR1 |= USART_CR1_RXFFIE | USART_CR1_IDLEIE; // Enable Receive and idle interrupt
+
+	USART2->CR3 |= USART_CR3_DMAT;		// Enable DMA triggering for transmit
+	USART2->CR1 |= USART_CR1_UE; 		// Enable the uart
+
+	USART2->ICR |= USART_ICR_IDLECF; 	// Clear idle flag
 
 	/* Configure Interrupt */
 	/* Set priority for USART2_IRQn */

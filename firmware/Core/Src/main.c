@@ -136,9 +136,12 @@ void init(void){
     configure_IO();
 
     I2C1_Configure_Slave();
+
+    IRQ_PulseSetup();
+
+    /* Configure uarts */
     USART1_Configure();
     USART2_Configure();
-    IRQ_PulseSetup();
 
     ISR_Init();
 }
