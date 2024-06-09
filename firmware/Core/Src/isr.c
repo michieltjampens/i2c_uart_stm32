@@ -179,7 +179,16 @@ void USART1_IRQHandler(void){
     if( USART1->ISR & USART_ISR_TC ){
     	USART1->ICR |= USART_ICR_TCCF; /* Clear transfer complete flag */
     }
-    if((USART1->ISR & USART_ISR_RXNE_RXFNE) == USART_ISR_RXNE_RXFNE){ // ISR for received data
+    /*
+     * It can happen that during startup, noise is on the rx which can be seen as data.
+     * If this happens both Framing error and Receive not empty are set.
+     * So before processing received data, check FE first and clear RX flag if FE is set.
+     * If it isn't, process it.
+     */
+    if((USART1->ISR & USART_ISR_FE) == USART_ISR_FE){
+    	USART1->ICR |= USART_ICR_FECF; /* Clear frame error flag */
+    	USART1->RQR |= USART_RQR_RXFRQ; /* Clear frame receive flag */
+    }else if((USART1->ISR & USART_ISR_RXNE_RXFNE) == USART_ISR_RXNE_RXFNE){ // ISR for received data
     	uint8_t recChar = (uint8_t)(USART1->RDR); /* Receive data, clear flag */
     	*ui_write_USART1++ = recChar;
     	USART1_cnt++;
@@ -204,7 +213,16 @@ void USART2_IRQHandler(void){
     if( USART2->ISR & USART_ISR_TC ){
     	USART2->ICR = USART_ICR_TCCF; /* Clear transfer complete flag */
     }
-    if((USART2->ISR & USART_ISR_RXNE_RXFNE) == USART_ISR_RXNE_RXFNE){ // ISR for received data
+    /*
+     * It can happen that during startup, noise is on the rx which can be seen as data.
+     * If this happens both Framing error and Receive not empty are set.
+     * So before processing received data, check FE first and clear RX flag if FE is set.
+     * If it isn't, process it.
+     */
+    if((USART2->ISR & USART_ISR_FE) == USART_ISR_FE){
+    	USART2->ICR |= USART_ICR_FECF; /* Clear frame error flag */
+    	USART2->RQR |= USART_RQR_RXFRQ; /* Clear frame receive flag */
+    }else if((USART2->ISR & USART_ISR_RXNE_RXFNE) == USART_ISR_RXNE_RXFNE){ // ISR for received data
     	uint8_t recChar = (uint8_t)(USART2->RDR); /* Receive data, clear flag */
     	*ui_write_USART2++ = recChar;
     	USART2_cnt++;
