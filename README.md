@@ -1,4 +1,4 @@
-# I2C to USART with stm32
+# I2C to USART with STM32C0
 Firmware for STM32C0 with CORE M0+ to use the usarts via I²C. 
 Because I wanted a cheaper alternative to the purpose built chips that start at 6€.
 
