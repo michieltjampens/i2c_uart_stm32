@@ -26,6 +26,7 @@ __IO uint16_t error;
 /* Private variables ---------------------------------------------------------*/
 uint8_t i2c_recBuffer[64];
 uint8_t i2c_cnt=0x00;
+uint8_t testcode=0x0;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -45,15 +46,17 @@ int main(void){
 	/* Configure the system clock */
 	SysTick_Config(2000); /* 1ms config */
     SystemClock_Config();
-    SysTick_Config(12000); /* 1ms config */
+    SysTick_Config(1200); /* 100us config */
 
   /* Initialize all configured peripherals */
     init();
 
   /* Infinite loop */
   while (1){
-	  Check_usart1_out();
-	  Check_usart2_out();
+	  if( testcode==00){
+		  Check_usart1_out();
+	  	  Check_usart2_out();
+	  }
   }
 
 }
@@ -107,12 +110,46 @@ __INLINE void SystemClock_Config(void){
 
 /* This function handles SysTick Handler.  */
 void SysTick_Handler(void){
-	/*Tick++;
-	if( Tick==500){
-		USART1->TDR=0x22;
-		USART2->TDR=0x55;
-		Tick=0;
-	}*/
+	Tick++;
+	if( testcode !=0 ){
+		if( Tick == 5 ){ // 500µs High
+			GPIOA->ODR &= ~GPIO_ODR_OD0;
+		}
+		if( Tick == 6 ){ // 600µs High
+			GPIOA->ODR &= ~GPIO_ODR_OD1;
+		}
+		if( Tick == 7 ){
+			GPIOA->ODR &= ~GPIO_ODR_OD2;
+		}
+		if( Tick == 8 ){
+			GPIOA->ODR &= ~GPIO_ODR_OD3;
+		}
+		if( Tick == 9 ){
+			GPIOA->ODR &= ~GPIO_ODR_OD4;
+		}
+		if( Tick == 10 ){
+			GPIOA->ODR &= ~GPIO_ODR_OD5;
+		}
+		if( Tick == 10 ){
+			GPIOA->ODR &= ~GPIO_ODR_OD6;
+		}
+		if( Tick == 12 ){
+			GPIOA->ODR &= ~GPIO_ODR_OD7;
+		}
+		if( Tick == 13 ){
+			GPIOA->ODR &= ~GPIO_ODR_OD8;
+		}
+		if( Tick == 14 ){
+			GPIOA->ODR &= ~GPIO_ODR_OD9;
+		}
+		if( Tick == 15 ){
+			GPIOA->ODR &= ~GPIO_ODR_OD10;
+		}
+		if( Tick==25 ){
+			GPIOA->ODR |= 0x003F; // Turn on 0 till 10
+			Tick=0;
+		}
+	}
 }
 
 /**
@@ -133,17 +170,21 @@ void Error_Handler(void)
 /* ********************************************************************************************************** */
 void init(void){
 
-    configure_IO();
+	if( testcode==0 ){
+		configure_IO();
 
-    I2C1_Configure_Slave();
+		I2C1_Configure_Slave();
 
-    IRQ_PulseSetup();
+		IRQ_PulseSetup();
 
-    /* Configure uarts */
-    USART1_Configure();
-    USART2_Configure();
+		/* Configure uarts */
+		USART1_Configure();
+		USART2_Configure();
 
-    ISR_Init();
+		ISR_Init();
+	}else{
+		configure_IO_test();
+	}
 }
 
 void configure_IO(void){
@@ -161,6 +202,20 @@ void configure_IO(void){
 	MODIFY_REG(GPIOA->MODER, GPIO_MODER_MODE8, GPIO_MODER_MODE8_1); // Enable AF
 	// Set to AF11 (1011 or 0x0B) for TIM3_CH3
 	GPIOA->AFR[1] = (GPIOA->AFR[1] &~ (GPIO_AFRH_AFSEL8 )) | (GPIO_AFRH_AFSEL8_3|GPIO_AFRH_AFSEL8_1|GPIO_AFRH_AFSEL8_0);
+
+}
+void configure_IO_test(void){
+	/* Enable the SYStemConfiguration peripheral clock, this handles interrupts */
+	/* THIS NEEDS TO GO FIRST */
+    RCC->APBENR2 |= RCC_APBENR2_SYSCFGEN;
+    RCC->IOPENR |= RCC_IOPENR_GPIOAEN | RCC_IOPENR_GPIOBEN; // Enable peripheral clock GPIOA & GPIOB
+
+	/* The I2C pins are on the PA9 and PA10 that are from remapped on PA11 and PA12 */
+	SYSCFG->CFGR1 |= (SYSCFG_CFGR1_PA11_RMP|SYSCFG_CFGR1_PA12_RMP);
+
+    // Set all used pins as output
+	GPIOA->MODER &= 0xFFC00000; // Clear A0 till A10
+    GPIOA->MODER |= 0x00155555; // Set GPIO0 till 10 as output
 
 }
 void IRQ_PulseSetup(){
