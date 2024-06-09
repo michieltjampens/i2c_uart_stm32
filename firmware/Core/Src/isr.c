@@ -188,7 +188,8 @@ void USART1_IRQHandler(void){
     }
     if( USART1->ISR & USART_ISR_IDLE ){
     	USART1->ICR |= USART_ICR_IDLECF; /* Clear idle flag */
-    	TIM3->CR1 |= TIM_CR1_CEN; // Trigger irq
+    	if( ui_read_USART1!=ui_write_USART1 ) // only trigger if there's data
+    		TIM3->CR1 |= TIM_CR1_CEN; // Trigger irq
     }
     if( ok==0x00 ){ // Meaning ISR was for unknown reason
         isr_error = ERROR_USART_TRANSMIT; /* Report an error */
@@ -210,9 +211,11 @@ void USART2_IRQHandler(void){
 		if (ui_write_USART2 == ui_tail_USART2) // So never write on the tail!
 			ui_write_USART2 = ui_head_USART2;  // End reached, back to head
     }
+    // The receiver is idle
     if( USART2->ISR & USART_ISR_IDLE ){
     	USART2->ICR |= USART_ICR_IDLECF; /* Clear idle flag */
-    	TIM3->CR1 |= TIM_CR1_CEN; // Trigger irq
+    	if( ui_read_USART2!=ui_write_USART2 ) // only trigger if there's data
+    		TIM3->CR1 |= TIM_CR1_CEN; // Trigger irq
     }
     if( ok==0x00 ){ // Meaning ISR was for unknown reason
     	isr_error = ERROR_USART_TRANSMIT; /* Report an error */
