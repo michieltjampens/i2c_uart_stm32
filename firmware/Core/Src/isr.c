@@ -136,7 +136,7 @@ void Check_usart1_out(){
 	uart1_todo -= todo; 			 // substract the portion from the total
 
 	if( todo > 1 ){
-		while( uart1_wait <= 2 ); // Wait for another byte, but this somehow blocks?
+		while( uart1_wait <= 1 ); // Wait for another byte, but this somehow blocks?
 	}
 	SET_BIT(DMA1_Channel1->CCR,DMA_CCR_EN); // Start it again
 }
@@ -165,7 +165,7 @@ void Check_usart2_out(){
 	uart2_todo -= todo; 			 // substract the portion from the total
 
 	if( todo > 1 ){
-		while( uart2_wait <= 2 ); // Wait for another byte, but this somehow blocks?
+		while( uart2_wait <= 1 ); // Wait for another byte, but this somehow blocks?
 	}
 	SET_BIT(DMA1_Channel2->CCR,DMA_CCR_EN); // Start it again
 }
