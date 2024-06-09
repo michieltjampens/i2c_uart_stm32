@@ -60,11 +60,26 @@ void Check_usart2_out(void);
 
 
 #define I2C_IDLE_STATE 	 	 0x00
+// Status
 #define I2C_REC_STATUS	     0x01
+#define I2C_REC_STATUS1	     0x11
+#define I2C_REC_STATUS2      0x21
+// Size
 #define I2C_TO_UART_SIZE     0x02
+#define I2C_TO_UART1_SIZE    0x12
+#define I2C_TO_UART2_SIZE    0x22
+// i2c->uart Data
 #define I2C_TO_UART_DATA     0x03
+#define I2C_TO_UART1_DATA    0x13
+#define I2C_TO_UART2_DATA    0x23
+// Conf
 #define I2C_CONF_STATE 	     0x04
+#define I2C_CONF1_STATE 	 0x14
+#define I2C_CONF2_STATE 	 0x24
+// uart->i2c
 #define UART_TO_I2C_DATA     0x05
+#define UART1_TO_I2C_DATA    0x15
+#define UART2_TO_I2C_DATA    0x25
 
 #ifdef __cplusplus
 }
