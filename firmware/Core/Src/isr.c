@@ -178,7 +178,7 @@ void USART1_IRQHandler(void){
     uint8_t ok = 0x01;
 
     if( USART1->ISR & USART_ISR_TC ){
-    	USART1->ICR |= USART_ICR_TCCF; /* Clear transfer complete flag */
+    	USART1->ICR = USART_ICR_TCCF; /* Clear transfer complete flag */
     }
     /*
      * It can happen that during startup, noise is on the rx which can be seen as data.
@@ -187,8 +187,8 @@ void USART1_IRQHandler(void){
      * If it isn't, process it.
      */
     if((USART1->ISR & USART_ISR_FE) == USART_ISR_FE){
-    	USART1->ICR |= USART_ICR_FECF; /* Clear frame error flag */
-    	USART1->RQR |= USART_RQR_RXFRQ; /* Clear frame receive flag */
+    	USART1->ICR = USART_ICR_FECF; /* Clear frame error flag */
+    	USART1->RQR = USART_RQR_RXFRQ; /* Clear frame receive flag */
     }else if((USART1->ISR & USART_ISR_RXNE_RXFNE) == USART_ISR_RXNE_RXFNE){ // ISR for received data
     	uint8_t recChar = (uint8_t)(USART1->RDR); /* Receive data, clear flag */
     	*ui_write_USART1++ = recChar;
@@ -196,7 +196,7 @@ void USART1_IRQHandler(void){
 			ui_write_USART1 = ui_head_USART1;  // End reached, back to head
     }
     if( USART1->ISR & USART_ISR_IDLE ){
-    	USART1->ICR |= USART_ICR_IDLECF; /* Clear idle flag */
+    	USART1->ICR = USART_ICR_IDLECF; /* Clear idle flag */
     	if( ui_read_USART1!=ui_write_USART1 ) // only trigger if there's data
     		TIM3->CR1 |= TIM_CR1_CEN; // Trigger irq
     }
@@ -220,8 +220,8 @@ void USART2_IRQHandler(void){
      * If it isn't, process it.
      */
     if((USART2->ISR & USART_ISR_FE) == USART_ISR_FE){
-    	USART2->ICR |= USART_ICR_FECF; /* Clear frame error flag */
-    	USART2->RQR |= USART_RQR_RXFRQ; /* Clear frame receive flag */
+    	USART2->ICR = USART_ICR_FECF; /* Clear frame error flag */
+    	USART2->RQR = USART_RQR_RXFRQ; /* Clear frame receive flag */
     }else if((USART2->ISR & USART_ISR_RXNE_RXFNE) == USART_ISR_RXNE_RXFNE){ // ISR for received data
     	uint8_t recChar = (uint8_t)(USART2->RDR); /* Receive data, clear flag */
     	*ui_write_USART2++ = recChar;
@@ -230,7 +230,7 @@ void USART2_IRQHandler(void){
     }
     // The receiver is idle
     if( USART2->ISR & USART_ISR_IDLE ){
-    	USART2->ICR |= USART_ICR_IDLECF; /* Clear idle flag */
+    	USART2->ICR = USART_ICR_IDLECF; /* Clear idle flag */
     	if( ui_read_USART2!=ui_write_USART2 ) // only trigger if there's data
     		TIM3->CR1 |= TIM_CR1_CEN; // Trigger irq
     }
@@ -265,7 +265,7 @@ void DMA1_Channel2_3_IRQHandler(void) {  // now it does nothing only clears the 
 /* *************************************************************************************** */
 void I2C1_IRQHandler(void){
 		if((I2C1->ISR & I2C_ISR_ADDR) == I2C_ISR_ADDR){
-			  I2C1->ICR |= I2C_ICR_ADDRCF; /* Clear address match flag */
+			  I2C1->ICR = I2C_ICR_ADDRCF; /* Clear address match flag */
 
 			  /* Figure out if it's the first or second port */
 			  // And with the used bits for addcode, then shift it all to a byte instead
@@ -357,9 +357,9 @@ void I2C1_IRQHandler(void){
 			}
 	  }
 	  if(I2C1->ISR & I2C_ISR_STOPF){
-		  SET_BIT(I2C1->ICR, I2C_ICR_STOPCF); // Clear flag
+		  I2C1->ICR = I2C_ICR_STOPCF; // Clear flag
 	  }
 	  if(I2C1->ISR & I2C_ISR_NACKF){ /* NACK Received*/
-		  SET_BIT(I2C1->ICR, I2C_ICR_NACKCF); // Clear flag
+		  I2C1->ICR = I2C_ICR_NACKCF; // Clear flag
 	  }
 }

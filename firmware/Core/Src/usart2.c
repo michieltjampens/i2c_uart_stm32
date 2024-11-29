@@ -25,7 +25,7 @@ void USART2_Configure_GPIO(void){
      * -> Then set AF bits to AF1 (0001 or 0x01)
      */
     GPIOA->AFR[0] = (GPIOA->AFR[0] &~ (GPIO_AFRL_AFSEL2 | GPIO_AFRL_AFSEL3)) | (GPIO_AFRL_AFSEL2_0|GPIO_AFRL_AFSEL3_0);
-
+    //MODIFY_REG( GPIOA->AFR[0], GPIO_AFRL_AFSEL2 | GPIO_AFRL_AFSEL3, 1 << GPIO_AFRL_AFSEL2_Pos | 1 << GPIO_AFRL_AFSEL3_Pos );
   /* Extra info                                                                         */
   /* For the alternate functions, check the datasheet 'Alternate functions'             */
   /* AFR[0]=pin 0 to 7, AFR[1]=pin 8 to 15, each pin has 4 bits for selection           */
@@ -59,5 +59,5 @@ void USART2_Configure_Setup(void){
 	/* Enable USART2_IRQn */
 	NVIC_EnableIRQ(USART2_IRQn);
 
-	USART2->CR1 |= USART_CR1_UE; 		// Enable the uart
+	SET_BIT( USART2->CR1, USART_CR1_UE ); 		// Enable the uart
 }

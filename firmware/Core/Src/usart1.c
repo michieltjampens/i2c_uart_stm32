@@ -23,6 +23,7 @@ void USART1_Configure_GPIO(void){
      * -> Then set AF bits to AF4 (0100 or 0x04) using AFSELx_2 which toggles the third bit
      */
     GPIOA->AFR[0] = (GPIOA->AFR[0] &~ (GPIO_AFRL_AFSEL0 | GPIO_AFRL_AFSEL1)) | (GPIO_AFRL_AFSEL0_2|GPIO_AFRL_AFSEL1_2);
+    //MODIFY_REG( GPIOA->AFR[0], GPIO_AFRL_AFSEL0 | GPIO_AFRL_AFSEL1, 4 << GPIO_AFRL_AFSEL0_Pos | 4 << GPIO_AFRL_AFSEL1_Pos );
 }
 void USART1_Configure_Setup(void){
 
@@ -45,11 +46,11 @@ void USART1_Configure_Setup(void){
     /* USART_CR1_RXFFIE = Rx buffer full int      */
     /* USART_CR1_IDLEIE = Idle isr enabled        */
 
-	USART1->CR1 |= USART_CR1_UE; // Enable the uart
-
-	/* Configure Interrupt */
+    /* Configure Interrupt */
 	/* Set priority for USART1_IRQn */
 	NVIC_SetPriority(USART1_IRQn, 0);
 	/* Enable USART1_IRQn */
 	NVIC_EnableIRQ(USART1_IRQn);
+
+	SET_BIT( USART1->CR1, USART_CR1_UE); // Enable the uart
 }

@@ -1,5 +1,5 @@
 /**
- * Class with methods to use the I2C1 peripheral on the STM32L0x0 device
+ * Class with methods to use the I2C1 peripheral on the STM32C0x device
  */
 /* Includes ------------------------------------------------------------------*/
 #include <stdint.h>
@@ -29,16 +29,16 @@ __INLINE void I2C1_Configure_Slave(void){
    * -> Then set AF bits to AF6 (0110 or 0x06)
    */
   GPIOA->AFR[1] = (GPIOA->AFR[1] &~ (GPIO_AFRH_AFSEL9 | GPIO_AFRH_AFSEL10)) | (GPIO_AFRH_AFSEL9_1|GPIO_AFRH_AFSEL9_2|GPIO_AFRH_AFSEL10_1|GPIO_AFRH_AFSEL10_2);
-
+  // same thing? MODIFY_REG( GPIOA->AFR[1], GPIO_AFRH_AFSEL9| GPIO_AFRH_AFSEL10, 6 << GPIO_AFRH_AFSEL9_Pos) || ( 6 << GPIO_AFRH_AFSEL10_Pos );
   /* I2C needs to be open drain */
-  GPIOA->OTYPER |= GPIO_OTYPER_OT9 | GPIO_OTYPER_OT10;
+  SET_BIT( GPIOA->OTYPER, GPIO_OTYPER_OT9 | GPIO_OTYPER_OT10 );
 
   /* Configure I2C1 as slave */
   I2C1->CR1 = I2C_CR1_ADDRIE; /* Address match interrupt enable */
   I2C1->OAR1 |= (uint32_t)(I2C1_OWN_ADDRESS1 << 1); /* 7-bit address (see .h) */
-  I2C1->OAR1 |= I2C_OAR1_OA1EN; /* Enable own address 1 */
+  SET_BIT( I2C1->OAR1, I2C_OAR1_OA1EN ); /* Enable own address 1 */
   I2C1->OAR2 |= (uint32_t)(I2C1_OWN_ADDRESS2 << 1); /* 7-bit address (see .h) */
-  I2C1->OAR2 |= I2C_OAR2_OA2EN; /* Enable own address 2 */
+  SET_BIT( I2C1->OAR2, I2C_OAR2_OA2EN ); /* Enable own address 2 */
   SET_BIT(I2C1->CR1,I2C_CR1_RXIE | I2C_CR1_TXIE); // Enable Receive and transmit interrupt
 
   /* Configure Interrupts */
