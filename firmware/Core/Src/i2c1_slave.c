@@ -17,21 +17,20 @@ __INLINE void I2C1_Configure_Slave(void){
 
   SET_BIT(RCC->APBENR1,RCC_APBENR1_I2C1EN); // Enable the peripheral clock I2C1 do this before GPIO's (?)
 
-  /* GPIO Setup, PA9=SCL and PA10=SDA */
-  SET_BIT(RCC->IOPENR,RCC_IOPENR_GPIOAEN);  // Enable the peripheral clock of GPIOA
+  /* GPIO Setup, PB6=SCL and PB7=SDA */
+  SET_BIT(RCC->IOPENR,RCC_IOPENR_GPIOBEN);  // Enable the peripheral clock of GPIOB
 
   /* Change PA9 and PA10 mode to use alternate mode */
-  MODIFY_REG(GPIOA->MODER, GPIO_MODER_MODE9|GPIO_MODER_MODE10, GPIO_MODER_MODE9_1|GPIO_MODER_MODE10_1);
+  MODIFY_REG(GPIOB->MODER, GPIO_MODER_MODE6|GPIO_MODER_MODE7, GPIO_MODER_MODE6_1|GPIO_MODER_MODE7_1);
 
-  /* First clear the AF setting for pin 9 and 10
-   * -> This is in AFR[1] because pin number above 7
+  /* First clear the AF setting for pin 6 and 7
+   * -> This is in AFR[0] because pin at most  7
    * -> Start with clearing the AF for those pins by doing a reverse and
    * -> Then set AF bits to AF6 (0110 or 0x06)
    */
-  GPIOA->AFR[1] = (GPIOA->AFR[1] &~ (GPIO_AFRH_AFSEL9 | GPIO_AFRH_AFSEL10)) | (GPIO_AFRH_AFSEL9_1|GPIO_AFRH_AFSEL9_2|GPIO_AFRH_AFSEL10_1|GPIO_AFRH_AFSEL10_2);
-  // same thing? MODIFY_REG( GPIOA->AFR[1], GPIO_AFRH_AFSEL9| GPIO_AFRH_AFSEL10, 6 << GPIO_AFRH_AFSEL9_Pos) || ( 6 << GPIO_AFRH_AFSEL10_Pos );
+  MODIFY_REG( GPIOB->AFR[0], GPIO_AFRL_AFSEL6 | GPIO_AFRL_AFSEL7, (6 << GPIO_AFRL_AFSEL6_Pos) | ( 6 << GPIO_AFRL_AFSEL7_Pos) );
   /* I2C needs to be open drain */
-  SET_BIT( GPIOA->OTYPER, GPIO_OTYPER_OT9 | GPIO_OTYPER_OT10 );
+  SET_BIT( GPIOB->OTYPER, GPIO_OTYPER_OT6 | GPIO_OTYPER_OT7 );
 
   /* Configure I2C1 as slave */
   I2C1->CR1 = I2C_CR1_ADDRIE; /* Address match interrupt enable */
