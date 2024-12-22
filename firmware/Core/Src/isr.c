@@ -243,18 +243,18 @@ void USART2_IRQHandler(void){
 /* ******************************* D M A ************************************************* */
 /* *************************************************************************************** */
 void DMA1_Channel1_IRQHandler(void) {  // now it does nothing only clears the flag
-	DMA1 -> IFCR |= DMA_IFCR_CHTIF1;
-	if(DMA1 -> ISR & (DMA_ISR_TCIF1)) {  // Transfer complete for channel 1
-        DMA1 -> IFCR |= DMA_IFCR_CTCIF1; // Clear the transfer complete flag
+	DMA1 -> IFCR = DMA_IFCR_CHTIF1;
+	if(DMA1->ISR & (DMA_ISR_TCIF1)) {  // Transfer complete for channel 1
+        DMA1->IFCR = DMA_IFCR_CTCIF1; // Clear the transfer complete flag
         CLEAR_BIT(DMA1_Channel1->CCR,DMA_CCR_EN); // Finished, so disable it
     	// Update the dma start position
     	DMA1_Channel1->CMAR = (uint32_t)outDMA_USART1;
     }
 }
 void DMA1_Channel2_3_IRQHandler(void) {  // now it does nothing only clears the flag
-	DMA1 -> IFCR |= DMA_IFCR_CHTIF2;
+	DMA1 -> IFCR = DMA_IFCR_CHTIF2;
 	if(DMA1 -> ISR & (DMA_ISR_TCIF2)) {  // Transfer complete for channel 2
-        DMA1 -> IFCR |= DMA_IFCR_CTCIF2; // Clear the transfer complete flag
+        DMA1 -> IFCR = DMA_IFCR_CTCIF2; // Clear the transfer complete flag
         CLEAR_BIT(DMA1_Channel2->CCR,DMA_CCR_EN); // Finished, so disable it
     	// Update the dma start position
     	DMA1_Channel2->CMAR = (uint32_t)outDMA_USART2;
